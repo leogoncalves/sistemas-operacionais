@@ -15,15 +15,20 @@
 * - Processos que sofrem preempção: fila de baixa prioridade
 */
 
+#define QUANTUM 5
+#define MAX_PROCESS_QUANTITY 10
+#define DISK_READ 1
+#define DISK_WRITE 2
+#define MAGNETIC_TAPE_READ 2
+#define MAGNETIC_TAPE_WRITE 3
+#define PRINTER_READ 3
+#define PRINTER_WRITE 4
+
 typedef struct Process{
     int pid;
-    int prioridade;
-    // int execucao;
-    // int executado;
-    // int chegada;
-    // int espera;
-    // int deadline;
-    // int turnaround;
+    int priority;
+    int start;
+    int duration;
 } Process;
 
 
@@ -37,12 +42,14 @@ typedef struct Queue {
 
 void createQueue(Queue* Q, int capacity);
 void insertProcess(Queue* Q, Process p);
-Process removeProcess(Queue* Q);
+void removeProcess(Queue* Q);
 int isEmptyQueue(Queue* Q);
 int isFullQueue(Queue* Q);
-
+Process createProcess(int pid, int priority, int start, int duration);
 
 int main (int argc, char **argv) {
+
+    int TOTAL_TIME = 0;
 
     Queue AltaPrioridadeCPU;
     Queue BaixaPrioridadeCPU;
@@ -51,6 +58,17 @@ int main (int argc, char **argv) {
     createQueue(&AltaPrioridadeCPU, 10);
     createQueue(&BaixaPrioridadeCPU, 10);
     createQueue(&IO, 10);
+
+    Process p0 = createProcess(1,1,0,10);
+    Process p1 = createProcess(1,1,5,20);
+    insertProcess(&AltaPrioridadeCPU, p0);
+    insertProcess(&AltaPrioridadeCPU, p1);
+
+    while(AltaPrioridadeCPU.numberOfItems != 0) {
+        
+    }
+
+        
 
     return 0;
 }
@@ -72,13 +90,11 @@ void insertProcess(Queue* Q, Process p) {
     Q->numberOfItems++;
 }
 
-Process removeProcess(Queue* Q) {
-    Process temp = Q->processList[Q->capacity];
+void removeProcess(Queue* Q) {    
     if(Q->first == Q->capacity) {
         Q->first = 0;
     }
-    Q->numberOfItems--;
-    return temp;
+    Q->numberOfItems--;    
 }
 
 int isEmptyQueue(Queue* Q) {
@@ -89,4 +105,12 @@ int isFullQueue(Queue* Q) {
     return (Q->numberOfItems == Q->capacity);
 }
 
-void RR()
+Process createProcess(int pid, int priority, int start, int duration) {
+    Process p;
+    p.pid = pid;
+    p.priority = priority;
+    p.start = start;
+    p.duration = duration;
+    return p;
+}
+
