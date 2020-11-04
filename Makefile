@@ -1,4 +1,4 @@
 all: build
 
 build: 
-	gcc main.c -o main -Wall
+	gcc queue.c -o main -Wall
