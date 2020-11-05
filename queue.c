@@ -16,8 +16,21 @@
 */
 
 
+#define QUANTUM 4
+
+typedef enum {HIGH_PRIORITY, LOW_PRIORITY} PRIORITY;
+
+// typedef enum {READY, } TYPE;
+
 typedef struct Process {
     unsigned pid;
+    unsigned arrivalTime; //tempo de chegada
+    unsigned burstTime; //tempo de execucao
+    unsigned turnaroundTime; //tempo de resposta
+    unsigned waitingTime; // tempo de espera
+
+    PRIORITY priority;
+    // int type;
     struct Process* next;
 } Process;
 
@@ -26,32 +39,55 @@ typedef struct Queue {
     Process *front, *rear;
 } Queue;
 
-Process *newProcess(unsigned pid);
+Process *newProcess(unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority);
 Queue* createQueue();
-void enqueue(Queue *queue, unsigned pid);
-void dequeue (Queue *queue);
-
+void enqueue(Queue *queue, unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority);
+Process* dequeue (Queue *queue);
+void testQueue();
 
 int main (int argc, char **argv) {
     
-    Queue* q = createQueue(); 
-    enqueue(q, 10); 
-    enqueue(q, 20); 
-    dequeue(q); 
-    dequeue(q); 
-    enqueue(q, 30); 
-    enqueue(q, 40); 
-    enqueue(q, 50); 
-    dequeue(q); 
-    printf("Queue Front : %d \n", q->front->pid); 
-    printf("Queue Rear : %d", q->rear->pid); 
+    Queue *ReadyQueue = createQueue();
+    Queue *HighPriorityCPUQueue = createQueue();
+    Queue *LowPriorityCPUQueue = createQueue();
+
+    enqueue(ReadyQueue, 0, 0, 13, 0, 0, HIGH_PRIORITY);
+    enqueue(ReadyQueue, 1, 4, 11, 0, 0, HIGH_PRIORITY);
+    enqueue(ReadyQueue, 2, 5, 7, 0, 0, HIGH_PRIORITY);
+    enqueue(ReadyQueue, 3, 7, 8, 0, 0, HIGH_PRIORITY);
+    enqueue(ReadyQueue, 4, 10, 16, 0, 0, HIGH_PRIORITY);
+
+    while( ReadyQueue->front->next != NULL ) {
+        // printf("entramos no while \n");
+        // Process *tmp = (Process*)malloc(sizeof(Process));
+        // tmp = ReadyQueue->front;
+
+        // if(tmp->burstTime == QUANTUM) {
+        //     //excecução completa, terminar o processo
+        // } else {
+
+        // }
+        Process *tmp = (Process*)malloc(sizeof(Process));
+        tmp = dequeue(ReadyQueue);
+        printf("%d\n", tmp->pid);
+        free(tmp);
+
+    }
+
+    printf("sem processo na mao chefia \n");
+
 
     return 0;
 }
 
-Process *newProcess(unsigned pid) {
+Process *newProcess(unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority) {
     Process *p = (Process*)malloc(sizeof(Process));
-    p-> pid = pid;
+    p->pid = pid;    
+    p->arrivalTime = arrivalTime; 
+    p->burstTime = burstTime; 
+    p->turnaroundTime = turnaroundTime;
+    p->waitingTime = waitingTime;
+    p->priority = HIGH_PRIORITY;
     return p;
 }
 
@@ -61,8 +97,8 @@ Queue* createQueue(){
     return queue;
 }
 
-void enqueue(Queue *queue, unsigned pid) {
-    Process *p = newProcess(pid);
+void enqueue(Queue *queue, unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority) {
+    Process *p = newProcess(pid, arrivalTime, burstTime, turnaroundTime, waitingTime, priority);
 
     if(queue->rear == NULL) {
         queue->front = queue->rear = p;
@@ -71,7 +107,7 @@ void enqueue(Queue *queue, unsigned pid) {
     queue->rear = p;
 }
 
-void dequeue (Queue *queue) {
+Process* dequeue (Queue *queue) {
     if(queue->rear == NULL) {
         return;
     }
@@ -81,6 +117,20 @@ void dequeue (Queue *queue) {
     if(queue->front == NULL) {
         queue->rear = NULL;
     }
-    free(p);
+    return p;
 
+}
+
+void testQueue(){
+    Queue* q = createQueue(); 
+    // enqueue(q, 10); 
+    // enqueue(q, 20); 
+    // dequeue(q); 
+    // dequeue(q); 
+    // enqueue(q, 30); 
+    // enqueue(q, 40); 
+    // enqueue(q, 50); 
+    // dequeue(q); 
+    printf("Queue Front : %d \n", q->front->pid); 
+    printf("Queue Rear : %d", q->rear->pid); 
 }
