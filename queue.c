@@ -15,67 +15,141 @@
 * - Processos que sofrem preempção: fila de baixa prioridade
 */
 
-
+// Define o quantum utilizado no algoritmo de RR
 #define QUANTUM 4
 
-typedef enum {HIGH_PRIORITY, LOW_PRIORITY} PRIORITY;
+// Define a prioridade de um processo (usado para atribuir o processo a fila correta)
+typedef enum { HIGH_PRIORITY = 1, LOW_PRIORITY = 0 } PRIORITY;
 
-// typedef enum {READY, } TYPE;
+// Define o tipo de dispositivo que solicita interrupção de IO
+typedef enum { DISK = 98, MAGNETIC_TAPE = 99, PRINTER = 100 } DEVICE;
 
-typedef struct Process {
+typedef enum { 
+    READ_DISK, WRITE_DISK, 
+    READ_MAGNETIC_TAPE, WRITE_MAGNETIC_TAPE, 
+    READ_PRINTER, WRITE_PRINTER,
+} DEVICE_OPERATION;
+
+// Define o status de um processo
+typedef enum { NOT_STARTED, READY, RUNNING, BLOCKED } STATUS;
+
+typedef struct Process {    
+    // identificador do processo
     unsigned pid;
-    unsigned arrivalTime; //tempo de chegada
-    unsigned burstTime; //tempo de execucao
-    unsigned turnaroundTime; //tempo de resposta
-    unsigned waitingTime; // tempo de espera
 
+    // PPID sempre será 1
+    unsigned ppid;
+
+    // tempo de chegada
+    unsigned arrivalTime;
+    
+    // tempo de execucao
+    unsigned burstTime; 
+
+    /*
+    * Turnaround sempre calculado com base 
+    * no Tempo total gasto pelo processo menos o 
+    * Tempo de chegada do processo na fila de prontos 
+    * pela primeira vez
+    */
+    unsigned turnaroundTime;
+
+    // tempo de espera
+    unsigned waitingTime;
+
+    // Prioridade do processo
     PRIORITY priority;
-    // int type;
+
+    // Status do processo 
+    STATUS status;
+
+    // Lista de oprações de IO
+    // momento de interrupação do processo
+    unsigned IOArrivalTime; 
+    
+    // tipo de dispositivo
+    DEVICE type;
+    
+    //status (iniciado, rodando, terminado)
+    DEVICE_OPERATION operation;
+
+    // Ponteiro para o próximo processo
     struct Process* next;
 } Process;
 
-
+// Estrutura de fila
 typedef struct Queue {    
     Process *front, *rear;
 } Queue;
 
+
+/*
+* Cria um novo processo e retorna um ponteiro para esse novo processo
+*/
 Process *newProcess(unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority);
+
+/*
+* Cria um fila vazia
+*/
 Queue* createQueue();
-void enqueue(Queue *queue, unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority);
+
+/*
+* Enfileira um processo em uma fila
+*/
+void enqueue(Queue *queue, Process* p);
+
+/*
+* Remove o processo do final da fila e o retorna;
+*/
 Process* dequeue (Queue *queue);
+
+/*
+* Teste para checar funcionamento da fila
+*/
 void testQueue();
+
+/*
+* Exibe as informações de um processo
+*/
+void printProcess(Process *p);
+
+/*
+* Prints
+*/
+void printPriority(PRIORITY priority);
+void printDeviceType(DEVICE deviceType);
+void IODeviceOperation(DEVICE_OPERATION operation);
+void processStatus(STATUS processStatus);
+
 
 int main (int argc, char **argv) {
     
     Queue *ReadyQueue = createQueue();
     Queue *HighPriorityCPUQueue = createQueue();
     Queue *LowPriorityCPUQueue = createQueue();
+    Queue *IOQueue = createQueue();
 
-    enqueue(ReadyQueue, 0, 0, 13, 0, 0, HIGH_PRIORITY);
-    enqueue(ReadyQueue, 1, 4, 11, 0, 0, HIGH_PRIORITY);
-    enqueue(ReadyQueue, 2, 5, 7, 0, 0, HIGH_PRIORITY);
-    enqueue(ReadyQueue, 3, 7, 8, 0, 0, HIGH_PRIORITY);
-    enqueue(ReadyQueue, 4, 10, 16, 0, 0, HIGH_PRIORITY);
+    Process *p0 = newProcess(0, 0, 13, 0, 0, HIGH_PRIORITY);
+    Process *p1 = newProcess(1, 4, 11, 0, 0, HIGH_PRIORITY);
+    Process *p2 = newProcess(2, 5, 7, 0, 0, HIGH_PRIORITY);
+    Process *p3 = newProcess(3, 7, 8, 0, 0, HIGH_PRIORITY);
+    Process *p4 = newProcess(4, 10, 16, 0, 0, HIGH_PRIORITY);
 
-    while( ReadyQueue->front->next != NULL ) {
-        // printf("entramos no while \n");
-        // Process *tmp = (Process*)malloc(sizeof(Process));
-        // tmp = ReadyQueue->front;
+    printf("#### DADOS DO PROCESSO ####\n");
+    printProcess(p0);
+    printProcess(p1);
+    printProcess(p2);
+    printProcess(p3);
+    printProcess(p4);
 
-        // if(tmp->burstTime == QUANTUM) {
-        //     //excecução completa, terminar o processo
-        // } else {
 
-        // }
-        Process *tmp = (Process*)malloc(sizeof(Process));
-        tmp = dequeue(ReadyQueue);
-        printf("%d\n", tmp->pid);
-        free(tmp);
+    enqueue(ReadyQueue, p0);
+    enqueue(ReadyQueue, p1);
+    enqueue(ReadyQueue, p2);
+    enqueue(ReadyQueue, p3);
+    enqueue(ReadyQueue, p4);
 
-    }
-
-    printf("sem processo na mao chefia \n");
-
+    
 
     return 0;
 }
@@ -97,8 +171,7 @@ Queue* createQueue(){
     return queue;
 }
 
-void enqueue(Queue *queue, unsigned pid, unsigned arrivalTime, unsigned burstTime, unsigned turnaroundTime, unsigned waitingTime, PRIORITY priority) {
-    Process *p = newProcess(pid, arrivalTime, burstTime, turnaroundTime, waitingTime, priority);
+void enqueue(Queue *queue, Process *p) {
 
     if(queue->rear == NULL) {
         queue->front = queue->rear = p;
@@ -121,16 +194,104 @@ Process* dequeue (Queue *queue) {
 
 }
 
-void testQueue(){
-    Queue* q = createQueue(); 
-    // enqueue(q, 10); 
-    // enqueue(q, 20); 
-    // dequeue(q); 
-    // dequeue(q); 
-    // enqueue(q, 30); 
-    // enqueue(q, 40); 
-    // enqueue(q, 50); 
-    // dequeue(q); 
-    printf("Queue Front : %d \n", q->front->pid); 
-    printf("Queue Rear : %d", q->rear->pid); 
+void enqueueProcessAfterIO(Queue *highPriority, Queue *lowPriority, Process* p) {
+    switch(p->type) {
+        case(DISK):
+            enqueue(lowPriority, p);
+            break;
+        case(MAGNETIC_TAPE):
+        case(PRINTER):
+            enqueue(highPriority, p);
+            break;
+    }
 }
+
+void printProcess(Process *p) {
+    
+    printf("PID\t PPID\t ARRIVAL_TIME\t BURST_TIME\t TURNAROUND_TIME\t WAITING_TIME\t PRIORIDADE\t STATUS\t IO_ARRIVAL_TIME\t DEVICE_TYPE\t OPERATION_TYPE\t  \n");
+    printf("%d\t", p->pid);
+    printf("%d\t", p->ppid);
+    printf("%d\t", p->arrivalTime);
+    printf("%d\t", p->burstTime);
+    printf("%d\t", p->turnaroundTime);
+    printf("%d\t", p->waitingTime);
+    printPriority(p->priority);
+    processStatus(p->status);
+    printf("%3d\t", p->IOArrivalTime);
+    printDeviceType(p->type);
+    IODeviceOperation(p->operation);
+}
+
+void printPriority(PRIORITY priority) {
+    switch(priority) {
+        case HIGH_PRIORITY:
+            printf("ALTA PRIORIDADE \t");
+            break;
+        case LOW_PRIORITY:
+            printf("ALTA PRIORIDADE \t");
+            break;
+        default:
+            printf("-\t");
+            break;
+    }
+};
+
+void printDeviceType(DEVICE deviceType){
+    switch(deviceType) {
+        case DISK:
+            printf("DISCO");
+            break;
+        case MAGNETIC_TAPE:
+            printf("FITA MAGNÉTICA");
+            break;
+        case PRINTER:
+            printf("IMPRESSORA");
+            break;
+    }
+};
+
+void IODeviceOperation(DEVICE_OPERATION operation){
+    switch(operation) {
+        case READ_DISK:
+            printf("LEITURA DO DISCO \t");
+            break;
+        case WRITE_DISK:
+            printf("ESCRITA NO DISCO \t");
+            break;
+        case READ_MAGNETIC_TAPE:
+            printf("LEITURA DA FITA MAGNÉTICA \t");
+            break;
+        case WRITE_MAGNETIC_TAPE:
+            printf("ESCRITA NA FITA MAGNÉTICA \t");
+            break;
+        case READ_PRINTER:
+            printf("LEITURA DA IMPRESSORA \t");
+            break;
+        case WRITE_PRINTER:
+            printf("ESCRITA DA IMPRESSORA \t");
+            break;
+        default:
+            printf("-\t");
+            break;
+    }
+};
+
+void processStatus(STATUS processStatus){
+    switch(processStatus) {
+        case NOT_STARTED:
+            printf("NAO INICIADO \t");
+            break;
+        case READY:
+            printf("PRONTO \t");
+            break;
+        case RUNNING:
+            printf("EXECUTANDO \t");
+            break;
+        case BLOCKED:
+            printf("BLOQUEADO \t");
+            break;
+        default:
+            printf("-\t");
+            break;
+    }
+};
