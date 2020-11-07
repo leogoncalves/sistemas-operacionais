@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /*
 * Limite máximo de processo criados
@@ -164,7 +165,9 @@ int main (int argc, char **argv) {
     enqueue(ReadyQueue, p4);
 
     while(1) {
-        printf("### CLOCK: %d ###\n", CLOCK);
+        if(CLOCK == 100) break;
+        sleep(1);
+        printf("\n\n### CLOCK: %d ###\n\n", CLOCK);
 
         printf("TAMANHO DA FILA DE PRONTOS %d\n", ReadyQueue->size);
         if(ReadyQueue->size != 0) {
@@ -221,7 +224,7 @@ int main (int argc, char **argv) {
                 printf("[FINISHED_INTERRUPT] DURATION == TOTAL_EXECUTION_TIME\n");
                 RUNNING_PROCESS->status = FINISHED;
                 RUNNING_PROCESS->currentRunningTime = 0;
-                printf("[FINISHED_INTERRUPT] PROCESSO PID %d FINALIZADO", RUNNING_PROCESS->pid);
+                printf("[FINISHED_INTERRUPT] PROCESSO PID %d FINALIZADO\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS = NULL;
             }
         }
@@ -239,44 +242,49 @@ int main (int argc, char **argv) {
                     switch(tmp->deviceType){
                         case MAGNETIC_TAPE:
                             if(tmp->deviceOperation == MAGNETIC_TAPE_DURATION) {
-                                printf("[MAGNETIC_TAPE_DURATION] DEVICE_OPERATION == MAGNETIC_TAPE_DURATION");
+                                printf("[MAGNETIC_TAPE_DURATION] DEVICE_OPERATION == MAGNETIC_TAPE_DURATION\n");
                                 tmp->status = READY;
-                                RUNNING_PROCESS->priority = HIGH_PRIORITY;
-                                printf("[MAGNETIC_TAPE_DURATION] VAMOS ENFILEIRAR PROCESSO TMP NA FILA DE ALTA");
+                            
+                                tmp->priority = HIGH_PRIORITY;
+                                printf("\n ### INFORMAÇOES DO PROCESSO ### \n");
+                                // printProcess(tmp);
+                                processStatus(tmp->status);
+                                printf("\n\n");
+                                printf("[MAGNETIC_TAPE_DURATION] VAMOS ENFILEIRAR PROCESSO TMP NA FILA DE ALTA\n");
                                 enqueue(HighPriorityCPUQueue, tmp);
-                                printf("[MAGNETIC_TAPE_DURATION] ENFILEIRAMOS PROCESS TMP NA FILA DE ALTA");
+                                printf("[MAGNETIC_TAPE_DURATION] ENFILEIRAMOS PROCESS TMP NA FILA DE ALTA\n");
                             } else {
-                                printf("[MAGNETIC_TAPE_DURATION] VAMOS ENFILEIRAR PROCESSO TMP NA FILA DE IO");
+                                printf("[MAGNETIC_TAPE_DURATION] VAMOS ENFILEIRAR PROCESSO TMP NA FILA DE IO\n");
                                 enqueue(IOQueue, tmp);
-                                printf("[MAGNETIC_TAPE_DURATION] ENFILEIRAMOS PROCESSO TMP NA FILA DE IO");
+                                printf("[MAGNETIC_TAPE_DURATION] ENFILEIRAMOS PROCESSO TMP NA FILA DE IO\n");
                             }
                             break;
                         case PRINTER:
                             if(tmp->deviceOperation == PRINTER_DURATION) {
-                                printf("[PRINTER_DURATION] DEVICE_OPERATION == PRINTER_DURATION");
+                                printf("[PRINTER_DURATION] DEVICE_OPERATION == PRINTER_DURATION\n");
                                 tmp->status = READY;
-                                RUNNING_PROCESS->priority = HIGH_PRIORITY;
-                                printf("[PRINTER_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE ALTA");
+                                tmp->priority = HIGH_PRIORITY;
+                                printf("[PRINTER_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE ALTA\n");
                                 enqueue(HighPriorityCPUQueue, tmp);
-                                printf("[PRINTER_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE ALTA");
+                                printf("[PRINTER_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE ALTA\n");
                             } else {
-                                printf("[PRINTER_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE IO");
+                                printf("[PRINTER_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE IO\n");
                                 enqueue(IOQueue, tmp);
-                                printf("[PRINTER_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE IO");
+                                printf("[PRINTER_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE IO\n");
                             }
                             break;
                         case DISK:
                             if(tmp->deviceOperation == DISK_DURATION) {
-                                printf("[DISK_DURATION] DEVICE_OPERATION == DISK_DURATION");
+                                printf("[DISK_DURATION] DEVICE_OPERATION == DISK_DURATION\n");
                                 tmp->status = READY;
-                                RUNNING_PROCESS->priority = LOW_PRIORITY;
-                                printf("[DISK_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE BAIXA");
+                                tmp->priority = LOW_PRIORITY;
+                                printf("[DISK_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE BAIXA\n");
                                 enqueue(LowPriorityCPUQueue, tmp);
-                                printf("[DISK_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE BAIXA");
+                                printf("[DISK_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE BAIXA\n");
                             } else {
-                                printf("[DISK_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE IO");
+                                printf("[DISK_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE IO\n");
                                 enqueue(IOQueue, tmp);
-                                printf("[DISK_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE IO");
+                                printf("[DISK_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE IO\n");
                             }
                             break;
                     }                    
