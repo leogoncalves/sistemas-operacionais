@@ -165,20 +165,18 @@ int main (int argc, char **argv) {
     enqueue(ReadyQueue, p4);
 
     while(1) {
-        if(CLOCK == 100) break;
-        sleep(1);
+        if(CLOCK == 6) break;
+        // sleep(1);
         printf("\n\n### CLOCK: %d ###\n\n", CLOCK);
 
-        printf("TAMANHO DA FILA DE PRONTOS %d\n", ReadyQueue->size);
         if(ReadyQueue->size != 0) {
+            printf("TAMANHO DA FILA DE NOVOS %d\n", ReadyQueue->size);
             int size = ReadyQueue->size;
             for(int i = 0; i <= size; i++ ){
                 Process *tmp = dequeue(ReadyQueue);
                 if(tmp->arrivalTime == CLOCK) {                    
                     tmp->status = READY;
-                    printf(" ENTROU \n ");
-                    processStatus(tmp->status);
-                    printf(" \n ");
+                    printf("[MAIN] Processo de pid %d entrou na fila de alta prioridade \n", tmp->pid);
                     enqueue(HighPriorityCPUQueue, tmp);
                 } else {
                     enqueue(ReadyQueue, tmp);
@@ -188,40 +186,43 @@ int main (int argc, char **argv) {
         printf("[LOG] Passamos pela fila de novos \n");
 
         if(!RUNNING_PROCESS) {
-            printf("[MAIN] SELEÇÃO PRA CPU\n");
+            printf("[CPU] SELEÇÃO PRA CPU\n");
             if(HighPriorityCPUQueue->size != 0) {
+                printf("[CPU] Tamanho da fila de alta prioridade: %d \n", HighPriorityCPUQueue->size);
                 RUNNING_PROCESS = dequeue(HighPriorityCPUQueue);                
+                printf("[CPU] Selecionado processo de pid %d da fila de alta prioridade \n", RUNNING_PROCESS->pid);
             } else if(LowPriorityCPUQueue->size != 0) {
                 RUNNING_PROCESS = dequeue(LowPriorityCPUQueue);
+                printf("[CPU] Selecionado processo de pid %d da fila de baixa prioridade \n", RUNNING_PROCESS->pid);
+            } else {
+                printf("[CPU] NENHUM PROCESSO DISPONÍVEL PARA EXECUCAO \n");
             }
         } 
 
         
         if(RUNNING_PROCESS) {
-            printf("[MAIN] RODANDO CPU\n");
+            printf("[MAIN] RODANDO PROCESSO DE PID %d NA CPU\n", RUNNING_PROCESS->pid);
             RUNNING_PROCESS->duration += 1;
             RUNNING_PROCESS->currentRunningTime += 1;
             
             if(RUNNING_PROCESS->duration == RUNNING_PROCESS->IOArrivalTime) {
-                printf("[IO_INTERRUPT] DURATION == IO_ARRIVAL_TIME\n");
+                printf("[IO_INTERRUPT] processo de pid %d interrompido por chamada de IO\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS->status = BLOCKED;
                 RUNNING_PROCESS->ioInterrupt = 1;
                 RUNNING_PROCESS->currentRunningTime = 0;
-                printf("[IO_INTERRUPT] PROCESSO SERA ENFILEIRADO NA FILA DE IO\n");
                 enqueue(IOQueue, RUNNING_PROCESS);
                 printf("[IO_INTERRUPT] PROCESSO ENFILEIRADO NA FILA DE IO\n");
                 RUNNING_PROCESS = NULL;
             } else if(RUNNING_PROCESS->currentRunningTime == QUANTUM) {
-                printf("[QUANTUM_INTERRUPT] CURRENT RUNNING TIME == QUANTUM\n");
+                printf("[QUANTUM_INTERRUPT] processo de pid %d interrompido por QUANTUM\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS->status = READY;
                 RUNNING_PROCESS->currentRunningTime = 0;
                 RUNNING_PROCESS->priority = LOW_PRIORITY;
-                printf("[QUANTUM_INTERRUPT] PROCESSO SERA ENFILEIRADO NA FILA DE BAIXA PRIORIDADE\n");
                 enqueue(LowPriorityCPUQueue, RUNNING_PROCESS);
                 printf("[QUANTUM_INTERRUPT] PROCESSO ENFILEIRADO NA FILA DE BAIXA PRIORIDADE\n");
                 RUNNING_PROCESS = NULL;
             } else if(RUNNING_PROCESS->duration == RUNNING_PROCESS->totalExecutionTime) {
-                printf("[FINISHED_INTERRUPT] DURATION == TOTAL_EXECUTION_TIME\n");
+                printf("[FINISHED_INTERRUPT] processo de pid %d FINALIZANDO\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS->status = FINISHED;
                 RUNNING_PROCESS->currentRunningTime = 0;
                 printf("[FINISHED_INTERRUPT] PROCESSO PID %d FINALIZADO\n", RUNNING_PROCESS->pid);
@@ -229,68 +230,57 @@ int main (int argc, char **argv) {
             }
         }
 
-        printf("[MAIN] TAMANHO DA FILA DE IO %d\n", IOQueue->size);
         if(IOQueue->size != 0) {
+            printf("[MAIN] TAMANHO DA FILA DE IO %d\n", IOQueue->size);
             int IOsize = IOQueue->size;
             for(int i = 0; i < IOsize; i++ ) {
-                printf("[IO] VAMOS DESENFILEIRAR PROCESSO DA FILA DE IO\n");                
                 Process *tmp = dequeue(IOQueue);
-                printf("\n[IO] DESENFILEIRAMOS PROCESSO DA FILA DE IO\n");
                 if(tmp->ioInterrupt == 0){
+                    printf("[IO] ANALISANDO PROCESSO DE PID %d DA FILA DE IO\n", tmp->pid);
                     tmp->deviceOperation += 1;
 
                     switch(tmp->deviceType){
                         case MAGNETIC_TAPE:
                             if(tmp->deviceOperation == MAGNETIC_TAPE_DURATION) {
-                                printf("[MAGNETIC_TAPE_DURATION] DEVICE_OPERATION == MAGNETIC_TAPE_DURATION\n");
-                                tmp->status = READY;
-                            
+                                printf("[MAGNETIC_TAPE] PROCESSO DE PID %d FINALIZOU CHAMADA DE IO\n", tmp->pid);
+                                tmp->status = READY;                            
                                 tmp->priority = HIGH_PRIORITY;
-                                printf("\n ### INFORMAÇOES DO PROCESSO ### \n");
-                                // printProcess(tmp);
-                                processStatus(tmp->status);
-                                printf("\n\n");
-                                printf("[MAGNETIC_TAPE_DURATION] VAMOS ENFILEIRAR PROCESSO TMP NA FILA DE ALTA\n");
                                 enqueue(HighPriorityCPUQueue, tmp);
-                                printf("[MAGNETIC_TAPE_DURATION] ENFILEIRAMOS PROCESS TMP NA FILA DE ALTA\n");
+                                printf("[MAGNETIC_TAPE] ENFILEIRANDO PROCESSO DE PID %d NA FILA DE ALTA PRIORIDADE\n", tmp->pid);
                             } else {
-                                printf("[MAGNETIC_TAPE_DURATION] VAMOS ENFILEIRAR PROCESSO TMP NA FILA DE IO\n");
                                 enqueue(IOQueue, tmp);
-                                printf("[MAGNETIC_TAPE_DURATION] ENFILEIRAMOS PROCESSO TMP NA FILA DE IO\n");
+                                printf("[MAGNETIC_TAPE] RETORNANDO PROCESSO DE PID %d PARA FILA DE IO\n", tmp->pid);
                             }
                             break;
                         case PRINTER:
                             if(tmp->deviceOperation == PRINTER_DURATION) {
-                                printf("[PRINTER_DURATION] DEVICE_OPERATION == PRINTER_DURATION\n");
+                                printf("[PRINTER] PROCESSO DE PID %d FINALIZOU CHAMADA DE IO\n", tmp->pid);
                                 tmp->status = READY;
                                 tmp->priority = HIGH_PRIORITY;
-                                printf("[PRINTER_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE ALTA\n");
                                 enqueue(HighPriorityCPUQueue, tmp);
-                                printf("[PRINTER_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE ALTA\n");
+                                printf("[PRINTER] ENFILEIRANDO PROCESSO DE PID %d NA FILA DE ALTA PRIORIDADE\n", tmp->pid);
                             } else {
-                                printf("[PRINTER_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE IO\n");
                                 enqueue(IOQueue, tmp);
-                                printf("[PRINTER_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE IO\n");
+                                printf("[PRINTER] RETORNANDO PROCESSO DE PID %d PARA FILA DE IO\n", tmp->pid);
                             }
                             break;
                         case DISK:
                             if(tmp->deviceOperation == DISK_DURATION) {
-                                printf("[DISK_DURATION] DEVICE_OPERATION == DISK_DURATION\n");
+                                printf("[DISK] PROCESSO DE PID %d FINALIZOU CHAMADA DE IO\n", tmp->pid);
                                 tmp->status = READY;
                                 tmp->priority = LOW_PRIORITY;
-                                printf("[DISK_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE BAIXA\n");
                                 enqueue(LowPriorityCPUQueue, tmp);
-                                printf("[DISK_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE BAIXA\n");
+                                printf("[DISK] ENFILEIRANDO PROCESSO DE PID %d NA FILA DE BAIXA PRIORIDADE\n", tmp->pid);
                             } else {
-                                printf("[DISK_DURATION] VAMOS ENFILEIRAR O PROCESSO NA FILA DE IO\n");
                                 enqueue(IOQueue, tmp);
-                                printf("[DISK_DURATION] ENFILEIRAMOS O PROCESSO NA FILA DE IO\n");
+                                printf("[DISK] RETORNANDO PROCESSO DE PID %d PARA FILA DE IO\n", tmp->pid);
                             }
                             break;
                     }                    
                 } else {
                     tmp->ioInterrupt = 0;
                     enqueue(IOQueue, tmp);
+                    printf("[IO] EXECUTANDO PROCESSO DE PID %d NA FILA DE IO. PROCESSO AINDA NAO FINALIZADO\n", tmp->pid);
 
                 }
                 
@@ -300,13 +290,6 @@ int main (int argc, char **argv) {
         CLOCK++;
     }
     printf("FIM\n");
-
-    // printf("#### DADOS DO PROCESSO ####\n");
-    // printProcess(p0);
-    // printProcess(p1);
-    // printProcess(p2);
-    // printProcess(p3);
-    // printProcess(p4);
     return 0;
 }
 
