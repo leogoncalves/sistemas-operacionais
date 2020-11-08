@@ -165,8 +165,10 @@ int main (int argc, char **argv) {
     enqueue(ReadyQueue, p4);
 
     while(1) {
-        if(CLOCK == 6) break;
-        // sleep(1);
+        // if(CLOCK == 200) break;
+        // Adiciona esperar no processo de 0.5s
+        
+        usleep(500000);
         printf("\n\n### CLOCK: %d ###\n\n", CLOCK);
 
         if(ReadyQueue->size != 0) {
