@@ -237,6 +237,7 @@ int main (int argc, char **argv) {
                 Process *tmp = dequeue(IOQueue);
                 if(tmp->ioInterrupt == 0){
                     printf("[IO] ANALISANDO PROCESSO DE PID %d DA FILA DE IO\n", tmp->pid);
+                    printProcess(tmp);
                     tmp->deviceOperation += 1;
 
                     switch(tmp->deviceType){
@@ -353,30 +354,31 @@ Process* dequeue (Queue *queue) {
 }
 
 void printProcess(Process *p) {  
-    // printf("pid , ppid , arrivalTime , totalExecutionTime , duration , currentRunningTime , priority , status , IOArrivalTime , type , deviceOperation \n");
-    printf("%d ", p->pid);
-    printf("%d ", p->ppid);
-    printf("%d ", p->arrivalTime);
-    printf("%d ", p->totalExecutionTime);
-    printf("%d ", p->duration);
-    printf("%d ", p->currentRunningTime);
+    printf("| PID | PPID | ArT | TET | Dur | CRT | Priority        | Status      | IOAT| Device        | D.O |\n");
+    printf("| %3d ", p->pid);
+    printf("| %3d  ", p->ppid);
+    printf("| %3d ", p->arrivalTime);
+    printf("| %3d ", p->totalExecutionTime);
+    printf("| %3d ", p->duration);
+    printf("| %3d ", p->currentRunningTime);
     printPriority(p->priority);
     processStatus(p->status);
-    printf("%d ", p->IOArrivalTime);
+    printf("| %3d ", p->IOArrivalTime);
     printDeviceType(p->deviceType);
-    printf("%d ", p->deviceOperation);
+    printf("| %3d |", p->deviceOperation);
+    printf("\n");
 }
 
 void printPriority(PRIORITY priority) {
     switch(priority) {
         case HIGH_PRIORITY:
-            printf("ALTA PRIORIDADE \t");
+            printf("| ALTA PRIORIDADE ");
             break;
         case LOW_PRIORITY:
-            printf("ALTA PRIORIDADE \t");
+            printf("| ALTA PRIORIDADE ");
             break;
         default:
-            printf("-\t");
+            printf("-");
             break;
     }
 };
@@ -384,13 +386,13 @@ void printPriority(PRIORITY priority) {
 void printDeviceType(DEVICE deviceType){
     switch(deviceType) {
         case DISK:
-            printf("DISCO");
+            printf("| DISCO         ");
             break;
         case MAGNETIC_TAPE:
-            printf("FITA MAGNÉTICA");
+            printf("| FITA MAGNÉTICA");
             break;
         case PRINTER:
-            printf("IMPRESSORA");
+            printf("| IMPRESSORA    ");
             break;
     }
 };
@@ -398,19 +400,19 @@ void printDeviceType(DEVICE deviceType){
 void processStatus(STATUS processStatus){
     switch(processStatus) {
         case NOT_STARTED:
-            printf("NAO INICIADO");
+            printf("| NAO INICIADO");
             break;
         case READY:
-            printf("PRONTO");
+            printf("| PRONTO      ");
             break;
         case RUNNING:
-            printf("EXECUTANDO");
+            printf("| EXECUTANDO  ");
             break;
         case BLOCKED:
-            printf("BLOQUEADO");
+            printf("| BLOQUEADO   ");
             break;
         case FINISHED:
-            printf("FINALIZADO");
+            printf("| FINALIZADO  ");
             break;
     }
 };
