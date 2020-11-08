@@ -1,7 +1,13 @@
+CC=gcc
+FLAGS=-Wall
+MAIN=queue.o
+DEPENDECIES=
+BIN=queue
+
 all: run
 
 run: build
 	@./main
 
 build: 
-	gcc queue.c -o main -Wall
+	$(CC) -c queue.c $(FLAGS)
