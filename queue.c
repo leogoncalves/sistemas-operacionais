@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 /*
 * Limite máximo de processo criados
@@ -27,7 +28,7 @@ typedef enum { HIGH_PRIORITY, LOW_PRIORITY } PRIORITY;
 typedef enum { HIGH_PRIORITY_QUEUE, LOW_PRIORITY_QUEUE, IO_QUEUE, READY_QUEUE } QUEUE_NAME;
 
 // Define o tipo de dispositivo que solicita interrupção de IO
-typedef enum { DISK, MAGNETIC_TAPE, PRINTER } DEVICE;
+typedef enum { DISK = 997, MAGNETIC_TAPE = 998, PRINTER = 999 } DEVICE;
 #define DISK_DURATION 2
 #define MAGNETIC_TAPE_DURATION 4
 #define PRINTER_DURATION 5
@@ -89,6 +90,11 @@ typedef struct Queue {
 } Queue;
 
 
+typedef struct Semaphore {
+    int flag;
+    DEVICE deviceType;
+} Semaphore;
+
 /*
 * Cria um novo processo e retorna um ponteiro para esse novo processo
 */
@@ -123,24 +129,23 @@ void printProcess(Process *p);
 * Prints
 */
 void printPriority(PRIORITY priority);
+void printQueue(Queue* q);
 void printDeviceType(DEVICE deviceType);
 void processStatus(STATUS processStatus);
 
-void printQueueName(QUEUE_NAME name){
-    switch(name){
-        case HIGH_PRIORITY_QUEUE:
-            printf("HIGH_PRIORITY_QUEUE");
-            break;
-        case LOW_PRIORITY_QUEUE:
-            printf("LOW_PRIORITY_QUEUE");
-            break;
-        case IO_QUEUE:
-            printf("IO_QUEUE");
-            break;
-        case READY_QUEUE:
-            printf("READY_QUEUE");
-            break;
+void createRandomProcess(Queue* queue, int max_process_number);
+
+Semaphore* createSemaphore(DEVICE deviceType);
+void blockSemaphore(Semaphore* sem);
+int checkSemaphore(Semaphore* sem);
+void releaseSemaphore(Semaphore* sem);
+
+// função para checar encerramento do simulador
+int allTerminatedProcess(Queue *high, Queue *low, Queue *io, Queue *ready, Process* p) {
+    if(high->size == 0 && low->size == 0 && io->size == 0 && ready->size == 0 && p == NULL) {
+        return 1;
     }
+    return 0;
 }
 
 int main (int argc, char **argv) {
@@ -149,40 +154,47 @@ int main (int argc, char **argv) {
     Queue *HighPriorityCPUQueue = createQueue(HIGH_PRIORITY_QUEUE);
     Queue *LowPriorityCPUQueue = createQueue(LOW_PRIORITY_QUEUE);
     Queue *IOQueue = createQueue(IO_QUEUE);
+
+    Semaphore* sem_DISK = createSemaphore(DISK);
+    Semaphore* sem_MAGNETIC_TAPE = createSemaphore(MAGNETIC_TAPE);
+    Semaphore* sem_PRINTER = createSemaphore(PRINTER);
+
     int CLOCK = 0;
     Process *RUNNING_PROCESS = NULL;
+    srand(time(NULL));
 
-    Process *p0 = newProcess(1, 0, 13, 3, DISK);
-    Process *p1 = newProcess(2, 4, 11, 5, PRINTER);
-    Process *p2 = newProcess(3, 5, 7, 2, MAGNETIC_TAPE);
-    Process *p3 = newProcess(4, 7, 8, 4, MAGNETIC_TAPE);
-    Process *p4 = newProcess(5, 8, 16, 11, DISK);
+    // Process *p0 = newProcess(1, 0, 13, 3, DISK);
+    // Process *p1 = newProcess(2, 4, 11, 5, PRINTER);
+    // Process *p2 = newProcess(3, 5, 7, 2, MAGNETIC_TAPE);
+    // Process *p3 = newProcess(4, 7, 8, 4, MAGNETIC_TAPE);
+    // Process *p4 = newProcess(5, 8, 16, 11, DISK);
     
-    printProcess(p0);
-    enqueue(ReadyQueue, p0);
-    printf("\n");
+    // printProcess(p0);
+    // enqueue(ReadyQueue, p0);
+    // printf("\n");
     
-    printProcess(p1);
-    enqueue(ReadyQueue, p1);
-    printf("\n");
+    // printProcess(p1);
+    // enqueue(ReadyQueue, p1);
+    // printf("\n");
     
-    printProcess(p2);
-    enqueue(ReadyQueue, p2);
-    printf("\n");
+    // printProcess(p2);
+    // enqueue(ReadyQueue, p2);
+    // printf("\n");
     
-    printProcess(p3);
-    enqueue(ReadyQueue, p3);
-    printf("\n");
+    // printProcess(p3);
+    // enqueue(ReadyQueue, p3);
+    // printf("\n");
     
-    printProcess(p4);
-    enqueue(ReadyQueue, p4);
-    printf("\n");
+    // printProcess(p4);
+    // enqueue(ReadyQueue, p4);
+    // printf("\n");
 
-    while(1) {
-        if(CLOCK == 200) break;
+    createRandomProcess(ReadyQueue, 10);
+
+    while(!allTerminatedProcess(ReadyQueue, HighPriorityCPUQueue, LowPriorityCPUQueue, IOQueue, RUNNING_PROCESS)) {
         
         // Adiciona esperar no processo de 0.5s        
-        // usleep(500000);
+        // usleep(2000000);
         
         printf("\n\n### CLOCK: %d ###\n\n", CLOCK);
 
@@ -195,7 +207,7 @@ int main (int argc, char **argv) {
         printf("[MAIN] FILA DE IO \n");
         printQueue(IOQueue);
 
-        printf("###################################### \n");
+        printf("###################################### \n\n");
 
         if(ReadyQueue->size != 0) {
             printf("TAMANHO DA FILA DE NOVOS %d\n", ReadyQueue->size);
@@ -204,33 +216,24 @@ int main (int argc, char **argv) {
             printQueue(ReadyQueue);
             for(int i = 0; i < size; i++ ){
                 Process *tmp = dequeue(ReadyQueue);
-                printf("ITER: %d | CLOCK: %d  \n", i, CLOCK);
                 if(tmp->arrivalTime == CLOCK) {                    
                     tmp->status = READY;
                     printf("[MAIN] Processo de pid %d entrou na fila de alta prioridade \n", tmp->pid);
-                    printf("[MAIN] FILA DE ALTA PRIORIDADE \n");
-                    printQueue(HighPriorityCPUQueue);
                     enqueue(HighPriorityCPUQueue, tmp);
                 } else {
                     enqueue(ReadyQueue, tmp);
                 }
             }
         }
-        printf("[LOG] Passamos pela fila de novos \n");
+        printf("[MAIN] VERIFICADA SE HOUVE NOVOS PROCESSOS \n");
 
         if(!RUNNING_PROCESS) {
             printf("[CPU] SELEÇÃO PRA CPU\n");
 
             if(HighPriorityCPUQueue->size != 0) {
-                printf("FILA DE ALTA PRIORIDADE \n");
-                printQueue(HighPriorityCPUQueue);
-
-                printf("[CPU] Tamanho da fila de alta prioridade: %d \n", HighPriorityCPUQueue->size);
                 RUNNING_PROCESS = dequeue(HighPriorityCPUQueue);                
                 printf("[CPU] Selecionado processo de pid %d da fila de alta prioridade \n", RUNNING_PROCESS->pid);
             } else if(LowPriorityCPUQueue->size != 0) {
-                printf("FILA DE BAIXA PRIORIDADE \n");
-                printQueue(LowPriorityCPUQueue);
                 RUNNING_PROCESS = dequeue(LowPriorityCPUQueue);
                 printf("[CPU] Selecionado processo de pid %d da fila de baixa prioridade \n", RUNNING_PROCESS->pid);
             } else {
@@ -244,21 +247,24 @@ int main (int argc, char **argv) {
             RUNNING_PROCESS->duration += 1;
             RUNNING_PROCESS->currentRunningTime += 1;
             
-            if(RUNNING_PROCESS->duration == RUNNING_PROCESS->IOArrivalTime) {
-                printf("[IO_INTERRUPT] processo de pid %d interrompido por chamada de IO\n", RUNNING_PROCESS->pid);
-                RUNNING_PROCESS->status = BLOCKED;
-                RUNNING_PROCESS->ioInterrupt = 1;
-                RUNNING_PROCESS->currentRunningTime = 0;
-                enqueue(IOQueue, RUNNING_PROCESS);
-                printf("[IO_INTERRUPT] PROCESSO ENFILEIRADO NA FILA DE IO\n");
-                RUNNING_PROCESS = NULL;
-            } else if(RUNNING_PROCESS->duration == RUNNING_PROCESS->totalExecutionTime) {
+            if(RUNNING_PROCESS->duration == RUNNING_PROCESS->totalExecutionTime) {
                 printf("[FINISHED_INTERRUPT] processo de pid %d FINALIZANDO\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS->status = FINISHED;
                 RUNNING_PROCESS->currentRunningTime = 0;
                 printf("[FINISHED_INTERRUPT] PROCESSO PID %d FINALIZADO\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS = NULL;
-            } else if(RUNNING_PROCESS->currentRunningTime == QUANTUM) {
+            } else if(RUNNING_PROCESS->duration == RUNNING_PROCESS->IOArrivalTime) {                
+                if(RUNNING_PROCESS->IOArrivalTime != 0) {
+                    printf("[IO_INTERRUPT] processo de pid %d interrompido por chamada de IO\n", RUNNING_PROCESS->pid);                
+                    RUNNING_PROCESS->status = BLOCKED;
+                    RUNNING_PROCESS->ioInterrupt = 1;
+                    RUNNING_PROCESS->currentRunningTime = 0;
+                    enqueue(IOQueue, RUNNING_PROCESS);
+                    printf("[IO_INTERRUPT] PROCESSO ENFILEIRADO NA FILA DE IO\n");
+                    RUNNING_PROCESS = NULL;
+                }                
+            }
+            else if(RUNNING_PROCESS->currentRunningTime == QUANTUM) {
                 printf("[QUANTUM_INTERRUPT] processo de pid %d interrompido por QUANTUM\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS->status = READY;
                 RUNNING_PROCESS->currentRunningTime = 0;
@@ -270,19 +276,19 @@ int main (int argc, char **argv) {
         }
 
         if(IOQueue->size != 0) {
-            printf("[MAIN] TAMANHO DA FILA DE IO %d\n", IOQueue->size);
-            printf("FILA DE IO \n");
-            printQueue(IOQueue);
+            printf("[IO] VERIFICANDO FILA DE IO \n");
             int IOsize = IOQueue->size;
             for(int i = 0; i < IOsize; i++ ) {
                 Process *tmp = dequeue(IOQueue);
                 if(tmp->ioInterrupt == 0){
                     printf("[IO] ANALISANDO PROCESSO DE PID %d DA FILA DE IO\n", tmp->pid);
-                    printProcess(tmp);
-                    tmp->deviceOperation += 1;
-
+                    // printProcess(tmp);
                     switch(tmp->deviceType){
                         case MAGNETIC_TAPE:
+                            if(checkSemaphore(sem_MAGNETIC_TAPE)){
+                                blockSemaphore(sem_MAGNETIC_TAPE);
+                                tmp->deviceOperation += 1;
+                            }
                             if(tmp->deviceOperation == MAGNETIC_TAPE_DURATION) {
                                 printf("[MAGNETIC_TAPE] PROCESSO DE PID %d FINALIZOU CHAMADA DE IO\n", tmp->pid);
                                 tmp->status = READY;                            
@@ -295,6 +301,10 @@ int main (int argc, char **argv) {
                             }
                             break;
                         case PRINTER:
+                            if(checkSemaphore(sem_PRINTER)){
+                                blockSemaphore(sem_PRINTER);
+                                tmp->deviceOperation += 1;
+                            }
                             if(tmp->deviceOperation == PRINTER_DURATION) {
                                 printf("[PRINTER] PROCESSO DE PID %d FINALIZOU CHAMADA DE IO\n", tmp->pid);
                                 tmp->status = READY;
@@ -307,6 +317,10 @@ int main (int argc, char **argv) {
                             }
                             break;
                         case DISK:
+                            if(checkSemaphore(sem_DISK)){
+                                blockSemaphore(sem_DISK);
+                                tmp->deviceOperation += 1;
+                            }
                             if(tmp->deviceOperation == DISK_DURATION) {
                                 printf("[DISK] PROCESSO DE PID %d FINALIZOU CHAMADA DE IO\n", tmp->pid);
                                 tmp->status = READY;
@@ -322,16 +336,19 @@ int main (int argc, char **argv) {
                 } else {
                     tmp->ioInterrupt = 0;
                     enqueue(IOQueue, tmp);
-                    printf("[IO] EXECUTANDO PROCESSO DE PID %d NA FILA DE IO. PROCESSO AINDA NAO FINALIZADO\n", tmp->pid);
+                    printf("[IO] PROCESSO DE PID %d ENTRANDO NA FILA DE IO\n", tmp->pid);
 
                 }
                 
             }
+            releaseSemaphore(sem_DISK);
+            releaseSemaphore(sem_MAGNETIC_TAPE);
+            releaseSemaphore(sem_PRINTER);
         }
 
         CLOCK++;
     }
-    printf("FIM\n");
+    printf("FIM DA SIMULACAO\n");
     return 0;
 }
 
@@ -407,13 +424,6 @@ Process* dequeue (Queue *queue) {
             queue->front = queue->rear = NULL;
         }
     }
-        
-    // if(queue->front == NULL) {
-    //     queue->rear = NULL;
-    // }
-    
-    // printf("######### DEQUEUE ######## \n");
-    // printf("PID PROCESSO %d | PID DO NEXT: %d\n", p->pid, p->next->pid);
     return p;
 
 }
@@ -479,16 +489,60 @@ void processStatus(STATUS processStatus){
     }
 };
 
-void createRandomProcess(Queue* queue, int numProcess){    
+Semaphore* createSemaphore(DEVICE deviceType){
+    Semaphore* sem = (Semaphore*)malloc(sizeof(Semaphore));
+    sem->flag = 1;
+    sem->deviceType = deviceType;
     
-    // unsigned pid, 
-    // unsigned arrivalTime, 
-    // unsigned totalExecutionTime, 
-    // unsigned IOArrivalTime, 
-    // DEVICE deviceType
-    
-    for(int i = 0; i<=numProcess ; i++) {
-        Process *tmp = newProcess(i+1, 0, 13, 3, DISK);
+    return sem;
+}
+void blockSemaphore(Semaphore* sem){
+    sem->flag = 0;
+}
+void releaseSemaphore(Semaphore* sem){
+    sem->flag = 1;
+}
+
+int checkSemaphore(Semaphore* sem){
+    return sem->flag;
+}
+
+int randomInRange(int min, int max) {
+    int random = rand();
+    return random % (max + 1 - min) + min;
+}
+
+void createRandomProcess(Queue* queue, int max_process_number) {
+        
+    int number_of_process = randomInRange(1, max_process_number);
+    printf("TOTAL DE PROCESSOS A SEREM CRIADOS: %d \n", number_of_process);
+    for(int i = 0; i < number_of_process ; i++) {
+        int arrival_time = randomInRange(0, 20);
+        int total_execution_time = randomInRange(4,10);
+        int io_arrival_time = randomInRange(0, total_execution_time);
+
+        DEVICE deviceType = 0;        
+        // magic number to device type enum
+        if(io_arrival_time) {
+            int randomDeviceType = randomInRange(DISK, PRINTER);
+            switch(randomDeviceType){
+                case DISK:
+                    deviceType = DISK;
+                    break;
+                case MAGNETIC_TAPE:
+                    deviceType = MAGNETIC_TAPE;
+                    break;
+                case PRINTER:
+                    deviceType = PRINTER;
+                    break;
+            }
+        }
+
+        if(io_arrival_time == 0) {
+            printf("PROCESS DE PID %d POSSUI IO ARRIVAL TIME IGUAL A 0 \n", i+1);
+        }
+
+        Process *tmp = newProcess(i+1, arrival_time, total_execution_time, io_arrival_time, deviceType);
         enqueue(queue, tmp);
     }
 }
