@@ -152,33 +152,64 @@ int main (int argc, char **argv) {
     int CLOCK = 0;
     Process *RUNNING_PROCESS = NULL;
 
-    Process *p0 = newProcess(0, 0, 13, 3, DISK);
-    Process *p1 = newProcess(1, 4, 11, 5, PRINTER);
-    Process *p2 = newProcess(2, 5, 7, 2, MAGNETIC_TAPE);
-    Process *p3 = newProcess(3, 7, 8, 4, MAGNETIC_TAPE);
-    Process *p4 = newProcess(4, 8, 16, 11, DISK);
-
+    Process *p0 = newProcess(1, 0, 13, 3, DISK);
+    Process *p1 = newProcess(2, 4, 11, 5, PRINTER);
+    Process *p2 = newProcess(3, 5, 7, 2, MAGNETIC_TAPE);
+    Process *p3 = newProcess(4, 7, 8, 4, MAGNETIC_TAPE);
+    Process *p4 = newProcess(5, 8, 16, 11, DISK);
+    
+    printProcess(p0);
     enqueue(ReadyQueue, p0);
+    printf("\n");
+    
+    printProcess(p1);
     enqueue(ReadyQueue, p1);
+    printf("\n");
+    
+    printProcess(p2);
     enqueue(ReadyQueue, p2);
+    printf("\n");
+    
+    printProcess(p3);
     enqueue(ReadyQueue, p3);
+    printf("\n");
+    
+    printProcess(p4);
     enqueue(ReadyQueue, p4);
+    printf("\n");
 
     while(1) {
-        // if(CLOCK == 200) break;
-        // Adiciona esperar no processo de 0.5s
+        if(CLOCK == 200) break;
         
-        usleep(500000);
+        // Adiciona esperar no processo de 0.5s        
+        // usleep(500000);
+        
         printf("\n\n### CLOCK: %d ###\n\n", CLOCK);
+
+        printf("[MAIN] FILA DE ALTA PRIORIDADE \n");
+        printQueue(HighPriorityCPUQueue);
+        
+        printf("[MAIN] FILA DE BAIXA PRIORIDADE \n");
+        printQueue(LowPriorityCPUQueue);
+
+        printf("[MAIN] FILA DE IO \n");
+        printQueue(IOQueue);
+
+        printf("###################################### \n");
 
         if(ReadyQueue->size != 0) {
             printf("TAMANHO DA FILA DE NOVOS %d\n", ReadyQueue->size);
             int size = ReadyQueue->size;
-            for(int i = 0; i <= size; i++ ){
+            printf("FILA DE NOVOS \n");
+            printQueue(ReadyQueue);
+            for(int i = 0; i < size; i++ ){
                 Process *tmp = dequeue(ReadyQueue);
+                printf("ITER: %d | CLOCK: %d  \n", i, CLOCK);
                 if(tmp->arrivalTime == CLOCK) {                    
                     tmp->status = READY;
                     printf("[MAIN] Processo de pid %d entrou na fila de alta prioridade \n", tmp->pid);
+                    printf("[MAIN] FILA DE ALTA PRIORIDADE \n");
+                    printQueue(HighPriorityCPUQueue);
                     enqueue(HighPriorityCPUQueue, tmp);
                 } else {
                     enqueue(ReadyQueue, tmp);
@@ -189,11 +220,17 @@ int main (int argc, char **argv) {
 
         if(!RUNNING_PROCESS) {
             printf("[CPU] SELEÇÃO PRA CPU\n");
+
             if(HighPriorityCPUQueue->size != 0) {
+                printf("FILA DE ALTA PRIORIDADE \n");
+                printQueue(HighPriorityCPUQueue);
+
                 printf("[CPU] Tamanho da fila de alta prioridade: %d \n", HighPriorityCPUQueue->size);
                 RUNNING_PROCESS = dequeue(HighPriorityCPUQueue);                
                 printf("[CPU] Selecionado processo de pid %d da fila de alta prioridade \n", RUNNING_PROCESS->pid);
             } else if(LowPriorityCPUQueue->size != 0) {
+                printf("FILA DE BAIXA PRIORIDADE \n");
+                printQueue(LowPriorityCPUQueue);
                 RUNNING_PROCESS = dequeue(LowPriorityCPUQueue);
                 printf("[CPU] Selecionado processo de pid %d da fila de baixa prioridade \n", RUNNING_PROCESS->pid);
             } else {
@@ -215,6 +252,12 @@ int main (int argc, char **argv) {
                 enqueue(IOQueue, RUNNING_PROCESS);
                 printf("[IO_INTERRUPT] PROCESSO ENFILEIRADO NA FILA DE IO\n");
                 RUNNING_PROCESS = NULL;
+            } else if(RUNNING_PROCESS->duration == RUNNING_PROCESS->totalExecutionTime) {
+                printf("[FINISHED_INTERRUPT] processo de pid %d FINALIZANDO\n", RUNNING_PROCESS->pid);
+                RUNNING_PROCESS->status = FINISHED;
+                RUNNING_PROCESS->currentRunningTime = 0;
+                printf("[FINISHED_INTERRUPT] PROCESSO PID %d FINALIZADO\n", RUNNING_PROCESS->pid);
+                RUNNING_PROCESS = NULL;
             } else if(RUNNING_PROCESS->currentRunningTime == QUANTUM) {
                 printf("[QUANTUM_INTERRUPT] processo de pid %d interrompido por QUANTUM\n", RUNNING_PROCESS->pid);
                 RUNNING_PROCESS->status = READY;
@@ -223,17 +266,13 @@ int main (int argc, char **argv) {
                 enqueue(LowPriorityCPUQueue, RUNNING_PROCESS);
                 printf("[QUANTUM_INTERRUPT] PROCESSO ENFILEIRADO NA FILA DE BAIXA PRIORIDADE\n");
                 RUNNING_PROCESS = NULL;
-            } else if(RUNNING_PROCESS->duration == RUNNING_PROCESS->totalExecutionTime) {
-                printf("[FINISHED_INTERRUPT] processo de pid %d FINALIZANDO\n", RUNNING_PROCESS->pid);
-                RUNNING_PROCESS->status = FINISHED;
-                RUNNING_PROCESS->currentRunningTime = 0;
-                printf("[FINISHED_INTERRUPT] PROCESSO PID %d FINALIZADO\n", RUNNING_PROCESS->pid);
-                RUNNING_PROCESS = NULL;
-            }
+            } 
         }
 
         if(IOQueue->size != 0) {
             printf("[MAIN] TAMANHO DA FILA DE IO %d\n", IOQueue->size);
+            printf("FILA DE IO \n");
+            printQueue(IOQueue);
             int IOsize = IOQueue->size;
             for(int i = 0; i < IOsize; i++ ) {
                 Process *tmp = dequeue(IOQueue);
@@ -252,7 +291,7 @@ int main (int argc, char **argv) {
                                 printf("[MAGNETIC_TAPE] ENFILEIRANDO PROCESSO DE PID %d NA FILA DE ALTA PRIORIDADE\n", tmp->pid);
                             } else {
                                 enqueue(IOQueue, tmp);
-                                printf("[MAGNETIC_TAPE] RETORNANDO PROCESSO DE PID %d PARA FILA DE IO\n", tmp->pid);
+                                printf("[MAGNETIC_TAPE] PROCESSO DE PID %d AINDA EM CHAMADA DE IO\n", tmp->pid);
                             }
                             break;
                         case PRINTER:
@@ -264,7 +303,7 @@ int main (int argc, char **argv) {
                                 printf("[PRINTER] ENFILEIRANDO PROCESSO DE PID %d NA FILA DE ALTA PRIORIDADE\n", tmp->pid);
                             } else {
                                 enqueue(IOQueue, tmp);
-                                printf("[PRINTER] RETORNANDO PROCESSO DE PID %d PARA FILA DE IO\n", tmp->pid);
+                                printf("[PRINTER] PROCESSO DE PID %d AINDA EM CHAMADA DE IO\n", tmp->pid);
                             }
                             break;
                         case DISK:
@@ -276,7 +315,7 @@ int main (int argc, char **argv) {
                                 printf("[DISK] ENFILEIRANDO PROCESSO DE PID %d NA FILA DE BAIXA PRIORIDADE\n", tmp->pid);
                             } else {
                                 enqueue(IOQueue, tmp);
-                                printf("[DISK] RETORNANDO PROCESSO DE PID %d PARA FILA DE IO\n", tmp->pid);
+                                printf("[DISK] PROCESSO DE PID %d AINDA EM CHAMADA DE IO\n", tmp->pid);
                             }
                             break;
                     }                    
@@ -334,29 +373,53 @@ void enqueue(Queue *queue, Process *p) {
 
     if(queue->rear == NULL) {
         queue->front = queue->rear = p;
-    }
-    queue->rear->next = p;
-    queue->rear = p;
+        queue->front->next = queue->rear;
+    } else {
+        p->next = queue->front;
+        queue->rear->next = p;
+        queue->rear = p;
+    }    
     queue->size += 1;
 }
 
+void printQueue(Queue* q) {
+    int size = q->size;
+    Process *p = q->front;
+    for(int i=0; i<size; i++) {
+        printf("POSICAO %d: %d -> %d \n", i, p->pid, p->next->pid);
+        p = p->next;
+    }
+    if(q->size == 0 && q->front != NULL) {
+        printf("POSICAO NULL: %d \n", q->front->pid);
+    }
+}
+
 Process* dequeue (Queue *queue) {
+    Process *p;
     if(queue->rear == NULL) {
         return NULL;
+    } else {
+        p = queue->front;
+        queue->front = queue->front->next;
+        queue->rear->next = queue->front;
+        queue->size -= 1;
+        if(queue->size == 0) {
+            queue->front = queue->rear = NULL;
+        }
     }
-    Process *p = queue->front;
-    queue->front = queue->front->next;
-
-    if(queue->front == NULL) {
-        queue->rear = NULL;
-    }
-    queue->size -= 1;
+        
+    // if(queue->front == NULL) {
+    //     queue->rear = NULL;
+    // }
+    
+    // printf("######### DEQUEUE ######## \n");
+    // printf("PID PROCESSO %d | PID DO NEXT: %d\n", p->pid, p->next->pid);
     return p;
 
 }
 
 void printProcess(Process *p) {  
-    printf("| PID | PPID | ArT | TET | Dur | CRT | Priority        | Status      | IOAT| Device        | D.O |\n");
+    printf("| PID | PPID | ArT | TET | DUR | CRT | PRIORITY        | STATUS      | IO_AT | DEVICE TYPE   | DEVICE OPEREATION |\n");
     printf("| %3d ", p->pid);
     printf("| %3d  ", p->ppid);
     printf("| %3d ", p->arrivalTime);
@@ -365,9 +428,9 @@ void printProcess(Process *p) {
     printf("| %3d ", p->currentRunningTime);
     printPriority(p->priority);
     processStatus(p->status);
-    printf("| %3d ", p->IOArrivalTime);
+    printf("| %3d   ", p->IOArrivalTime);
     printDeviceType(p->deviceType);
-    printf("| %3d |", p->deviceOperation);
+    printf("| %3d               |", p->deviceOperation);
     printf("\n");
 }
 
@@ -377,10 +440,7 @@ void printPriority(PRIORITY priority) {
             printf("| ALTA PRIORIDADE ");
             break;
         case LOW_PRIORITY:
-            printf("| ALTA PRIORIDADE ");
-            break;
-        default:
-            printf("-");
+            printf("| BAIXA PRIORIDADE ");
             break;
     }
 };
@@ -418,3 +478,17 @@ void processStatus(STATUS processStatus){
             break;
     }
 };
+
+void createRandomProcess(Queue* queue, int numProcess){    
+    
+    // unsigned pid, 
+    // unsigned arrivalTime, 
+    // unsigned totalExecutionTime, 
+    // unsigned IOArrivalTime, 
+    // DEVICE deviceType
+    
+    for(int i = 0; i<=numProcess ; i++) {
+        Process *tmp = newProcess(i+1, 0, 13, 3, DISK);
+        enqueue(queue, tmp);
+    }
+}
