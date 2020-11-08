@@ -1,7 +1,7 @@
 all: run
 
 run: build
-	@./main
+	@./main < input > output.md
 
 build: 
-	gcc queue.c -o main -Wall
+	gcc scheduler.c -o main -Wall
