@@ -17,43 +17,71 @@
 * - Processos que sofrem preempção: fila de baixa prioridade
 */
 
-// Define o quantum utilizado no algoritmo de RR
+/**
+*
+* Define o valor do QUANTUM que será utilizado pelo 
+* algoritmo de Round Robin na simulação.
+*
+**/
 #define QUANTUM 4
 
-// Define a prioridade de um processo (usado para atribuir o processo a fila correta)
-typedef enum { HIGH_PRIORITY, LOW_PRIORITY } PRIORITY;
-
-
-// Define nomes para filas
-typedef enum { HIGH_PRIORITY_QUEUE, LOW_PRIORITY_QUEUE, IO_QUEUE, READY_QUEUE } QUEUE_NAME;
-
-// Define o tipo de dispositivo que solicita interrupção de IO
-typedef enum { DISK = 997, MAGNETIC_TAPE = 998, PRINTER = 999 } DEVICE;
+/**
+*
+* Define a duração das operações de dispositivos de I/O. 
+*
+**/
 #define DISK_DURATION 2
 #define MAGNETIC_TAPE_DURATION 4
 #define PRINTER_DURATION 5
 
+/**
+*
+* Define a prioridade de um processo 
+* (utilizado para atribuir o processo a fila correta)
+*
+**/
+typedef enum { HIGH_PRIORITY, LOW_PRIORITY } PRIORITY;
 
-// Define o status de um processo
+
+/**
+*
+* Define os tipos de dispositivo de entrada e saída disponíveis
+*
+**/
+typedef enum { DISK = 997, MAGNETIC_TAPE = 998, PRINTER = 999 } DEVICE;
+
+/**
+*
+* Define os status de um processo
+*
+**/
 typedef enum { NOT_STARTED, READY, RUNNING, BLOCKED, FINISHED } STATUS;
 
+/**
+*
+*
+* Define a estrutura que iremos utiliar para definir um processo.
+*
+*
+**/
 typedef struct Process {    
     // identificador do processo
     unsigned pid;
 
-    // PPID sempre será 1
+    // PPID será sempre definido como 1 
+    // simulando que o processo seja filho do init
     unsigned ppid;
 
-    // tempo de chegada
+    // Tempo de chegada
     unsigned arrivalTime;
     
-    // tempo de execucao total necessário pro processo
+    // Tempo de execucao total necessário pro processo
     unsigned totalExecutionTime; 
 
-    // tempo do processo em processamento
+    // Tempo do processo em processamento
     unsigned duration; 
 
-    // tempo atualmente em cpu
+    // Tempo que o processo ficou em CPU 
     unsigned currentRunningTime;
 
     // Prioridade do processo
@@ -62,14 +90,13 @@ typedef struct Process {
     // Status do processo 
     STATUS status;
 
-    // Lista de oprações de IO
-    // momento de interrupação do processo
+    // Momento de interrupação do processo por dispositivo de I/O
     unsigned IOArrivalTime; 
     
-    // tipo de dispositivo
+    // Tipo de dispositivo de I/O
     DEVICE deviceType;
     
-    // operaçao do dispositivo
+    // Tempo de operaçao do dispositivo
     unsigned deviceOperation;
 
     /*
@@ -82,43 +109,51 @@ typedef struct Process {
     struct Process* next;
 } Process;
 
-// Estrutura de fila
+
+/*
+*
+* Define a estrutura para uma fila circular
+*/
 typedef struct Queue {    
     Process *front, *rear;
-    QUEUE_NAME name;
     int size;
 } Queue;
 
 
+/*
+*
+* Semáfora para controle de 
+* utilização de dispositivo de I/O
+*
+*/
 typedef struct Semaphore {
     int flag;
     DEVICE deviceType;
 } Semaphore;
 
 /*
-* Cria um novo processo e retorna um ponteiro para esse novo processo
+* Cria um novo processo e retorna um ponteiro para esse processo criado
 */
 Process *newProcess(unsigned pid, unsigned arrivalTime, unsigned totalExecutionTime, unsigned IOArrivalTime, DEVICE deviceType);
 
 /*
+*
 * Cria um fila vazia
+*
 */
-Queue* createQueue(QUEUE_NAME name);
+Queue* createQueue();
 
 /*
-* Enfileira um processo em uma fila
+*
+* Adicionar um processo na fila
+*
 */
 void enqueue(Queue *queue, Process* p);
 
 /*
-* Remove o processo do final da fila e o retorna;
+* Remove um processo da fila e retorna o ponteiro para o processo removido;
 */
 Process* dequeue (Queue *queue);
-
-/*
-* Teste para checar funcionamento da fila
-*/
-void testQueue();
 
 /*
 * Exibe as informações de um processo
@@ -126,21 +161,71 @@ void testQueue();
 void printProcess(Process *p);
 
 /*
-* Prints
+*
+* Função auxiliar para exibir a prioridade de um processo
+*
 */
 void printPriority(PRIORITY priority);
+
+/*
+*
+* Função auxiliar para imprimir uma fila
+*
+*/
 void printQueue(Queue* q);
+
+/*
+*
+* Função auxiliar para imprimir o tipo de
+* dispositivo utilizado no processo
+*/
 void printDeviceType(DEVICE deviceType);
+
+/*
+*
+* Função auxiliar para imprimir o status de um processo
+*
+*/
 void processStatus(STATUS processStatus);
 
+/*
+*
+* Cria uma determinada quantidade de processos com valores
+* aleatórios.
+*
+*/
 void createRandomProcess(Queue* queue, int max_process_number);
 
+/*
+*
+*
+*/
 Semaphore* createSemaphore(DEVICE deviceType);
+
+/*
+*
+*
+*/
 void blockSemaphore(Semaphore* sem);
+
+/*
+*
+*
+*/
 int checkSemaphore(Semaphore* sem);
+
+/*
+*
+*
+*/
 void releaseSemaphore(Semaphore* sem);
 
-// função para checar encerramento do simulador
+
+/*
+*
+* Verifica se todos os processos terminaram de ser executados
+*
+*/
 int allTerminatedProcess(Queue *high, Queue *low, Queue *io, Queue *ready, Process* p) {
     if(high->size == 0 && low->size == 0 && io->size == 0 && ready->size == 0 && p == NULL) {
         return 1;
@@ -148,72 +233,70 @@ int allTerminatedProcess(Queue *high, Queue *low, Queue *io, Queue *ready, Proce
     return 0;
 }
 
+/*
+*
+* Executa o escalonador com processos pré-definidos
+*
+*/
+void simulation_test(Queue* queue);
+
 int main (int argc, char **argv) {
     
-    Queue *ReadyQueue = createQueue(READY_QUEUE);
-    Queue *HighPriorityCPUQueue = createQueue(HIGH_PRIORITY_QUEUE);
-    Queue *LowPriorityCPUQueue = createQueue(LOW_PRIORITY_QUEUE);
-    Queue *IOQueue = createQueue(IO_QUEUE);
+    /*
+    * Define as filas que serão utilizadas
+    */
+    Queue *ReadyQueue = createQueue();
+    Queue *HighPriorityCPUQueue = createQueue();
+    Queue *LowPriorityCPUQueue = createQueue();
+    Queue *IOQueue = createQueue();
 
+    /*
+    * Define os semáforos que serão utiliados
+    */
     Semaphore* sem_DISK = createSemaphore(DISK);
     Semaphore* sem_MAGNETIC_TAPE = createSemaphore(MAGNETIC_TAPE);
     Semaphore* sem_PRINTER = createSemaphore(PRINTER);
 
+    /*
+    *
+    *
+    */
     int CLOCK = 0;
+
+    /*
+    * Processo em execução na CPU
+    *
+    */
     Process *RUNNING_PROCESS = NULL;
+
+    /*
+    * Inicializa semente utilizada para 
+    * definir números aleatórios utilizados
+    * na criação de novos processos
+    */
     srand(time(NULL));
+    
+    int total_process;
 
-    // Process *p0 = newProcess(1, 0, 13, 3, DISK);
-    // Process *p1 = newProcess(2, 4, 11, 5, PRINTER);
-    // Process *p2 = newProcess(3, 5, 7, 2, MAGNETIC_TAPE);
-    // Process *p3 = newProcess(4, 7, 8, 4, MAGNETIC_TAPE);
-    // Process *p4 = newProcess(5, 8, 16, 11, DISK);
-    
-    // printProcess(p0);
-    // enqueue(ReadyQueue, p0);
-    // printf("\n");
-    
-    // printProcess(p1);
-    // enqueue(ReadyQueue, p1);
-    // printf("\n");
-    
-    // printProcess(p2);
-    // enqueue(ReadyQueue, p2);
-    // printf("\n");
-    
-    // printProcess(p3);
-    // enqueue(ReadyQueue, p3);
-    // printf("\n");
-    
-    // printProcess(p4);
-    // enqueue(ReadyQueue, p4);
-    // printf("\n");
+    scanf("%d", &total_process);
 
-    createRandomProcess(ReadyQueue, 10);
-
+    if(total_process == 0) {
+        simulation_test(ReadyQueue);    
+    } else {
+        createRandomProcess(ReadyQueue, total_process);
+    }
+    
     while(!allTerminatedProcess(ReadyQueue, HighPriorityCPUQueue, LowPriorityCPUQueue, IOQueue, RUNNING_PROCESS)) {
         
         // Adiciona esperar no processo de 0.5s        
-        // usleep(2000000);
+        // usleep(500000);
         
         printf("\n\n### CLOCK: %d ###\n\n", CLOCK);
-
-        printf("[MAIN] FILA DE ALTA PRIORIDADE \n");
-        printQueue(HighPriorityCPUQueue);
-        
-        printf("[MAIN] FILA DE BAIXA PRIORIDADE \n");
-        printQueue(LowPriorityCPUQueue);
-
-        printf("[MAIN] FILA DE IO \n");
-        printQueue(IOQueue);
-
-        printf("###################################### \n\n");
 
         if(ReadyQueue->size != 0) {
             printf("TAMANHO DA FILA DE NOVOS %d\n", ReadyQueue->size);
             int size = ReadyQueue->size;
-            printf("FILA DE NOVOS \n");
-            printQueue(ReadyQueue);
+            
             for(int i = 0; i < size; i++ ){
                 Process *tmp = dequeue(ReadyQueue);
                 if(tmp->arrivalTime == CLOCK) {                    
@@ -282,7 +365,6 @@ int main (int argc, char **argv) {
                 Process *tmp = dequeue(IOQueue);
                 if(tmp->ioInterrupt == 0){
                     printf("[IO] ANALISANDO PROCESSO DE PID %d DA FILA DE IO\n", tmp->pid);
-                    // printProcess(tmp);
                     switch(tmp->deviceType){
                         case MAGNETIC_TAPE:
                             if(checkSemaphore(sem_MAGNETIC_TAPE)){
@@ -348,9 +430,16 @@ int main (int argc, char **argv) {
 
         CLOCK++;
     }
-    printf("FIM DA SIMULACAO\n");
+    printf("\nFIM DA SIMULACAO\n");
     return 0;
 }
+
+/*
+* Implementação das funções 
+* utilizadas para o desenvolvimento 
+* do simulador
+*
+*/
 
 Process *newProcess(
     unsigned pid, 
@@ -378,11 +467,10 @@ Process *newProcess(
     return p;
 }
 
-Queue* createQueue(QUEUE_NAME name){
+Queue* createQueue(){
     Queue *queue = (Queue*)malloc(sizeof(Queue));
     queue->front = queue->rear = NULL;
     queue->size = 0;
-    queue->name = name;
     return queue;
 }
 
@@ -496,9 +584,11 @@ Semaphore* createSemaphore(DEVICE deviceType){
     
     return sem;
 }
+
 void blockSemaphore(Semaphore* sem){
     sem->flag = 0;
 }
+
 void releaseSemaphore(Semaphore* sem){
     sem->flag = 1;
 }
@@ -514,9 +604,9 @@ int randomInRange(int min, int max) {
 
 void createRandomProcess(Queue* queue, int max_process_number) {
         
-    int number_of_process = randomInRange(1, max_process_number);
-    printf("TOTAL DE PROCESSOS A SEREM CRIADOS: %d \n", number_of_process);
-    for(int i = 0; i < number_of_process ; i++) {
+    // int number_of_process = randomInRange(1, max_process_number);
+    printf("TOTAL DE PROCESSOS A SEREM CRIADOS: %d \n", max_process_number);
+    for(int i = 0; i < max_process_number ; i++) {
         int arrival_time = randomInRange(0, 20);
         int total_execution_time = randomInRange(4,10);
         int io_arrival_time = randomInRange(0, total_execution_time);
@@ -545,4 +635,32 @@ void createRandomProcess(Queue* queue, int max_process_number) {
         Process *tmp = newProcess(i+1, arrival_time, total_execution_time, io_arrival_time, deviceType);
         enqueue(queue, tmp);
     }
+}
+
+void simulation_test(Queue* queue) {
+    Process *p0 = newProcess(1, 0, 13, 3, DISK);
+    Process *p1 = newProcess(2, 4, 11, 5, PRINTER);
+    Process *p2 = newProcess(3, 5, 7, 2, MAGNETIC_TAPE);
+    Process *p3 = newProcess(4, 7, 8, 4, MAGNETIC_TAPE);
+    Process *p4 = newProcess(5, 8, 16, 11, DISK);
+    
+    printProcess(p0);
+    enqueue(queue, p0);
+    printf("\n");
+    
+    printProcess(p1);
+    enqueue(queue, p1);
+    printf("\n");
+    
+    printProcess(p2);
+    enqueue(queue, p2);
+    printf("\n");
+    
+    printProcess(p3);
+    enqueue(queue, p3);
+    printf("\n");
+    
+    printProcess(p4);
+    enqueue(queue, p4);
+    printf("\n");
 }
